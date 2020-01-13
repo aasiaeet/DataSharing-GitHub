@@ -1,0 +1,203 @@
+---
+title: 'Drug Sensitivity Prediction: CCLE Data Set'
+author: "Amir Asiaee"
+date: "22 January 2020"
+output:
+  html_document:
+    toc: true
+    theme: yeti
+    highlight: kate
+    number_sections: true
+---
+  
+```{r setup, include=FALSE, results="hide"}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=96)
+```
+```{r mycss, results="asis", echo=FALSE}
+cat('
+<style type="text/css">
+b, strong {color: red; }
+i, em {color: blue; }
+.defn {color: purple; }
+.para {color: purple;
+      font-weight: bold;
+}
+.figure { text-align: center; }
+.caption { font-weight: bold; }
+</style>
+')
+```
+
+# Executive Summary
+## Background
+
+## Methods
+### Input Data
+
+### Procedure 
+
+### Output Data 
+
+### Statistics
+
+## Results
+
+## Conclusion
+
+# Basics
+First we prepare the paths for the clean data. 
+```{r pats}
+rm(list=ls())
+source("00-paths.R")
+```
+
+# Aux Functions and Parameter Setup
+Given a collection of samples here we ignore the cancer types and run a global elastic net for all drugs.  We first perform 5-fold cross-validation to find the best parameter. This is just the skeleton of what needs to be done. Then we pick our focus type. For now, we use the two most frequent cancers. We do 5-fold cross validation and remove features whose correlations with the output are less that 0.1.
+```{r}
+focusTypes <- c("LUNG", "HAEMATOPOIETIC_AND_LYMPHOID_TISSUE")
+alphas <- c(.1, .2, .3, .4, .5, .6, .7, .8, .9, 1)
+nfolds <- 5
+corrThresh <- .1
+load(file.path(paths$clean,"doseResponse.Rda"))
+```
+
+Next, we need the following auxiliary function to compute the minimum lambda for which all of the coefficients are zero, i.e., $\lambda_{max}$. See 2.5 of "Regularization Paths for Generalized Linear Models via Coordinate Descent" for justification of the formula used below.
+```{r whatisLambdaMax}
+mysd <- function(y) sqrt(sum((y-mean(y))^2)/length(y))
+computeLamdaMax <- function(X, y, alpha){
+  sx <- scale(X,scale=apply(X, 2, mysd))
+  sy <- as.vector(scale(y, scale=mysd(y)))
+  return(max(abs(colSums(sx*sy)))/length(sy))
+}
+```
+
+# Cross Validation
+Below is the heart of our cross-validation. Note that there are two parameters that we are tuning for elastic net, i.e, $\alpha$ and $\lambda$. The glmnet can simultanously fit many $\lambda$ but only single $\alpha$. This is why we have a loop over all alphas. Also, the $\lambda_{max}$ depends on each $\alpha$ and therefore is adjusted inside the $\alpha$ loop. We pick 100 $\lambda$ which are uniformly spaced in the $[0.001 \times \log(\lambda_{max}), \log(\lambda_{max})]$. Finally, the `paramDesign` helps us remember which combination of $\alpha$ and $\lambda$ generante the recorded error. Note that we are not normalizing data and therefore leave the `intercept = TRUE` (the default argument of glmnet). Also, we return the whole cross validation table so that we can apply various criteria to detect the best model, i.e., combination of $\alpha$ and $\lambda$. 
+
+```{r}
+library(glmnet)
+cv.DataSharing <- function(xyt, nfolds, alphas, corrThresh){
+  nTrain <- dim(xyt)[1]
+  foldsId <- sample(rep(1:nfolds, length.out = nTrain))
+  cvResults <- matrix(NA, nrow = nfolds, ncol = length(alphas) * 100)
+  varTest <- rep(NA, nfolds)
+  paramDesign <- expand.grid(rep(NA, 100), alphas)
+  colnames(paramDesign) <- c("lambda", "alpha")
+  
+  predictors <- subset(xyt, select = -c(yic50, yaa, t))
+  predictors <- predictors[,sapply(predictors, var) != 0]  # remove constant features
+  response <- xyt$yaa 
+  groupsId <- as.factor(xyt$t)
+  
+  lambdaMax <- computeLamdaMax(predictors, response) 
+  
+  for (k in 1:nfolds) {
+    print(paste("Fold", k, "started."))
+    # ptm <- proc.time()
+    testId <- which(foldsId == k)
+    trainX <- predictors[-testId, ]; trainY <- response[-testId]; trainG <- groupsId[-testId]
+    testX <- predictors[testId, ]; testY <- response[testId]; testG <- groupsId[testId]
+    varTest[k] <- var(testY)
+    
+    # remove features that are constant in the training set.
+    constantFeatureIndex <- sapply(trainX, var) != 0
+    trainX <- trainX[, constantFeatureIndex] 
+    testX <- testX[, constantFeatureIndex]
+    
+    # remove less relevant features
+    correlations <- sapply(trainX, cor, y=trainY)
+    mask <- (abs(correlations) >= corrThresh) 
+    bestTrainX <- as.matrix(trainX[,mask])
+    bestTestX <- as.matrix(testX[,mask])
+    
+    for(myAlpha in alphas){
+      lambdaMin <- 0.001 *  (lambdaMax / myAlpha)
+      myLambda <- exp(1)^seq(log(lambdaMin), log(lambdaMax), length.out = 100)
+      paramDesign$lambda[paramDesign$alpha == myAlpha] <- myLambda
+      
+      fit <- glmnet(x = bestTrainX, y = trainY, alpha = myAlpha, lambda = myLambda)
+      yHat <- predict(fit, newx=bestTestX, s = myLambda) 
+      err <- sapply(as.data.frame(yHat), function(x,y) mean((x - y)^2), testY)
+      cvResults[k, paramDesign$alpha == myAlpha] <- err  
+    }
+  }
+  cv <- list()
+  cv$params <- paramDesign
+  # MSE Criteria
+  ## Plain
+  cv$mean <- colMeans(cvResults)
+  cv$sd <- apply(cvResults, 2, sd)
+  minIndex <- which.min(cv$mean)
+  cv$minParam <- paramDesign[minIndex,]
+  ## One standard deviation rule
+  subParam <- paramDesign[cv$mean < cv$mean[minIndex] + cv$sd[minIndex], ]
+  cv$oneSdParam <- subParam[which.max(apply(subParam, 1, sum)),] #simpler models come from larger alpha and lambda. 
+  
+  # R2 Criteria
+  varMat <- matrix(rep(varTest, dim(cvResults)[2]), ncol = dim(cvResults)[2])
+  r2 <- 1 - cvResults / varMat
+  ## Plain
+  cv$meanr2 <- colMeans(r2)
+  cv$sdr2 <- apply(r2, 2, sd)
+  maxIndex <- which.max(cv$meanr2)
+  cv$maxParamr2 <- paramDesign[maxIndex,]
+  cv$varY <- var(response)
+  return(cv)
+}
+```
+I believe that the parameters selected using MSE or R2 will be similar in almost all cases. But since we want to compare the performance accross different drugs, it is better to use R2 since it will eliminate the effect of variance of output on MSE. 
+
+# Main Experiment
+
+Now, we perform experiment on all drugs:
+```{r cvForAllDrugs}
+allCvResults <- list()
+for(drug in unique(doseResponse$compound)){
+  load(file = file.path(paths$clean, paste("xyt_", drug, ".Rda", sep = "")))
+  xyt <- xyt[xyt$t %in% focusTypes, ]
+  cv <- cv.DataSharing(xyt, nfolds, alphas, corrThresh)
+  print(paste("Minimum MSE is", min(cv$mean), "where parameters are", "( alpha =", cv$minParam[2], ", lambda =", cv$minParam[1], ")"))
+  print(paste("Maximum R2 is", max(cv$meanr2), "where parameters are", "( alpha =", cv$maxParamr2[2], ", lambda =", cv$maxParamr2[1], ")"))
+  print(paste("Variance of response is", cv$varY))
+  allCvResults[[drug]] <- cv
+}
+save(allCvResults, file = file.path(paths$clean, "allCvResultsGlobal.Rda"))
+```
+
+
+It seems that the variance explained is very small. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Appendix: Session Info
+This anlysis was performed in this environment:
+```{r si}
+sessionInfo()
+```

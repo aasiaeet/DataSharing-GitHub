@@ -1,0 +1,143 @@
+---
+title: 'Drug Sensitivity Prediction: CCLE Data Set'
+author: "Amir Asiaee"
+date: "22 January 2020"
+output:
+  html_document:
+    toc: true
+    theme: yeti
+    highlight: kate
+    number_sections: true
+---
+  
+```{r setup, include=FALSE, results="hide"}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=96)
+```
+```{r mycss, results="asis", echo=FALSE}
+cat('
+<style type="text/css">
+b, strong {color: red; }
+i, em {color: blue; }
+.defn {color: purple; }
+.para {color: purple;
+      font-weight: bold;
+}
+.figure { text-align: center; }
+.caption { font-weight: bold; }
+</style>
+')
+```
+
+# Executive Summary
+## Background
+
+## Methods
+### Input Data
+
+### Procedure 
+
+### Output Data 
+
+### Statistics
+
+## Results
+
+## Conclusion
+
+# Basics
+First we prepare the paths for the clean data. 
+```{r pats}
+rm(list=ls())
+source("00-paths.R")
+```
+
+
+# Loading files
+```{r loadData}
+load(file.path(paths$clean,"doseResponse.Rda"))
+load(file = file.path(paths$clean, "X.Rda"))
+```
+
+# Exploring Data
+Let's look at the histogram of the cancer types among treated celllines to find the most frequent samples. First we want to check if all of the cell lines have the cancer type include. 
+
+```{r noCancerType}
+index <- sapply(strsplit(doseResponse$clName, "_"), function(x) if(length(x) == 1) TRUE else FALSE)
+clWithoutType <- unique(doseResponse$clName[index])
+```
+So there are three cell lines with no cancer type. We remove them. 
+```{r removeCL}
+dim(doseResponse)
+doseResponse <- doseResponse[!(doseResponse$clName %in% clWithoutType),]
+dim(doseResponse)
+sum(clWithoutType %in% rownames(X))
+# rm(index, clWithoutType)
+```
+It seems that those cellines had no expression measurement and therefore are already removed from X. 
+
+Now, we plot the averge number of each cancer type per drug to see which one of them is useable in our analysis. It seems going below 20 samples is a stretch. So the only useful cancer types are: 
+```{r freq}
+counts <- table(sapply(strsplit(doseResponse$clName, "_"), function(x) paste(x[2:length(x)], collapse = "_")))
+barplot(sort(decreasing = T,  counts / 24), las = 2, cex.names = .75)
+print(names(counts)[counts/ 24 > 20])
+```
+
+
+# Generating (X, y, t)
+Note that we can do this and all of the following analysis in a single loop. But since we may reuse the data multiple times for various experiment, we are going to do thise separately and save the results. X: measurements, y: response, t: cancer type. 
+```{r generateXy}
+for(drug in unique(doseResponse$compound)){
+  print(paste("Processing", drug))
+  y <- doseResponse[doseResponse$compound == drug & doseResponse$clName %in% rownames(X), ]
+  xyt <- as.data.frame(X[y$clName, ])
+  xyt$yic50 <- y$ic50
+  xyt$yaa <- y$actArea
+  # extractCancerType
+  xyt$t <- sapply(strsplit(y$clName, "_"), function(x) paste(x[2:length(x)], collapse = "_"))
+  save(xyt, file = file.path(paths$clean, paste("xyt_", drug, ".Rda", sep = "")))
+}
+```
+
+Note that because of the way that we made X (from cell line tested at least against one drug) `doseResponse$clName` samples are for sure included in X. But then removed those with zero expression measurements. Therefore, we need the intersection. Also, note that I'm keeping cancer type as character not factor.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Appendix: Session Info
+This anlysis was performed in this environment:
+```{r si}
+sessionInfo()
+```

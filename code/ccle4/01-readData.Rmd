@@ -1,7 +1,7 @@
 ---
-title: 'AML Drug Screening: Reading in and Packaging Data - Third Experiment'
-author: "Amir Asiaee and Kevin R. Coombes"
-date: "22 January 2019"
+title: 'Drug Sensitivity Prediction: CCLE Data Set'
+author: "Amir Asiaee"
+date: "22 January 2020"
 output:
   html_document:
     toc: true
@@ -56,12 +56,22 @@ source("00-paths.R")
 The most restrictive part of the data is the set of tested drugs. So we first read that and use the treated samples to filter out samples in other types of data. 
 
 ```{r readDrugs}
-drugs <- read.csv(file.path(paths$raw, "CCLE_NP24.2009_Drug_data_2015.02.24.csv"), header = T)
+drugs <- read.csv(file.path(paths$raw, "CCLE_NP24.2009_Drug_data_2015.02.24.csv"), header = T, check.names =  FALSE, stringsAsFactors = F)
 dim(drugs)
 head(drugs)
 sampleNames <- unique(sort(as.character(drugs$CCLE.Cell.Line.Name)))
 length(sampleNames)
+
+fileName <- file.path(paths$clean,"doseResponse.Rda")
+if (!file.exists(fileName)) {
+  doseResponse <- drugs[,c("Compound", "CCLE Cell Line Name","IC50 (uM)", "ActArea")]
+  colnames(doseResponse) <- c("compound", "clName", "ic50", "actArea")
+  save(doseResponse, file=fileName)
+} else{
+  load(fileName)
+}
 ```
+We are selecting two types of responses (y, output) for now: IC50 and activity above dose response curve.
 
 # Mutations
 ```{r readMutation}
@@ -223,21 +233,26 @@ if(!file.exists(myFile)){
 ```
 
 # Gluing Things Together
+We put together all of the measurements for any cell line that has been treated with a drug. 
 ```{r glue}
 load(file.path(paths$clean, "mut.Rda"))
 dim(Xmut)
-sum(apply(Xmut, 1, sum) == 0)
+print(paste("Number of cell lines with no mutation:", sum(apply(Xmut, 1, sum) == 0)))
 load(file.path(paths$clean, "cp.Rda"))
 dim(Xcp)
-sum(apply(Xcp, 1, sum) == 0)
+print(paste("Number of cell lines with no copy number change:", sum(apply(Xcp, 1, sum) == 0)))
 load(file.path(paths$clean, "exp.Rda"))
 dim(Xexp)
-sum(apply(Xexp, 1, sum) == 0)
+print(paste("Number of cell lines with no gene expressions:", sum(apply(Xexp, 1, sum) == 0)))
 load(file.path(paths$clean, "rppa.Rda"))
 dim(Xrppa)
-sum(apply(Xrppa, 1, sum) == 0)
+print(paste("Number of cell lines with no protein expressions:", sum(apply(Xrppa, 1, sum) == 0)))
 
 X <- cbind(Xmut, Xcp, Xexp, Xrppa)
+```
+We see that there are some cell lines that do not have some measurements. It is possible that a tumor does not have mutation or cp# changes. But it is impossible not to have gene or protein expressions. So, these are cell lines with missing data which we are going to ignore which will lead to 445 cell line (instead of 504):
+
+```{r checkingX}
 dim(X)
 X[100:105, c(1:5, 20000:20010, 50000:50010, 98600:98610)]
 # Remove all samples for which no expression or no rppa is measured
