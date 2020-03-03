@@ -1,0 +1,227 @@
+---
+title: 'Drug Sensitivity Prediction: Replicating Results of Barrentina et al. (2019)'
+author: "Amir Asiaee and Phillip Nicol"
+date: "21 January 2020"
+output:
+  html_document:
+    toc: true
+    theme: yeti
+    highlight: kate
+    number_sections: true
+---
+  
+```{r setup, include=FALSE, results="hide"}
+knitr::opts_chunk$set(echo = TRUE)
+options(width=96)
+```
+```{r mycss, results="asis", echo=FALSE}
+cat('
+<style type="text/css">
+b, strong {color: red; }
+i, em {color: blue; }
+.defn {color: purple; }
+.para {color: purple;
+      font-weight: bold;
+}
+.figure { text-align: center; }
+.caption { font-weight: bold; }
+</style>
+')
+```
+
+# Preprocessing
+First we prepare the paths for the clean data. 
+```{r pats}
+rm(list=ls())
+source("00-paths.R")
+```
+
+# Parameter tuning with cross validation
+In the supplements, the authors note that they tune the parameters $\alpha$ and $\lambda$ of the elastic net using "leave group out" cross validation with 90/10 train-test split. This is essentially 10-fold cross validation, excpept the test set is chosen randomly each time (so it is not necessarily a partition of the data). 
+
+Moreover, the authors note that they use 250 values of $\lambda$ by setting $\lambda = e^{\gamma}$ where $\gamma$ is evenly spaced in $[-6, 5]$. There are 10 chosen $\alpha$ in range $[0.2, 10]$. 
+```{r}
+alphas <- seq(0.2, 1, 0.08)
+lambdas <- exp(seq(-6, 5, 11/250))
+nfolds <- 10
+corrThresh <- .1
+load(file.path(paths$clean,"doseResponse.Rda"))
+```
+
+Now we can perform the cross validation. Note that there are 2500 possible combinations of $\alpha$ and $\lambda$! 
+```{r}
+library(glmnet)
+cv.DataSharing <- function(predictors, response, nfolds, alphas, lambdas, corrThresh){
+  nTrain <- dim(xyt)[1]
+  cvResults <- matrix(NA, nrow = nfolds, ncol = length(alphas) * length(lambdas))
+  correlation_results <- matrix(0, nrow = nfolds, ncol = length(alphas)*length(lambdas))
+  varTest <- rep(NA, nfolds)
+  paramDesign <- expand.grid(rep(NA, length(lambdas)), alphas)
+  colnames(paramDesign) <- c("lambda", "alpha")
+  
+  for (k in 1:nfolds) {
+    #print(paste("Fold", k, "started."))
+    # ptm <- proc.time()
+    
+    print(k)
+    
+    #in line with what I said above, they randomly choose test id
+    testId <- sample(1:nTrain, size = ceiling(nTrain/10), replace = FALSE)
+    trainX <- predictors[-testId, ]; trainY <- as.matrix(response[-testId,])
+    testX <- predictors[testId, ]; testY <- response[testId,]
+    varTest[k] <- var(testY)
+    
+    cutoffs <- (apply(trainX, 2, var) != 0)
+    
+    trainX <- trainX[,cutoffs]
+    testX <- testX[,cutoffs]
+    
+    # remove less relevant features
+    correlations <- apply(trainX, 2, cor, y=trainY)
+    mask <- (abs(correlations) >= corrThresh) 
+    bestTrainX <- as.matrix(trainX[,mask])
+    bestTestX <- as.matrix(testX[,mask])
+    
+    for(myAlpha in alphas){
+      paramDesign$lambda[paramDesign$alpha == myAlpha] <- lambdas
+      fit <- glmnet(x = bestTrainX, y = as.vector(trainY), alpha = myAlpha, lambda = lambdas)
+      yHat <- predict(fit, newx=bestTestX, s = lambdas) 
+      err <- sapply(as.data.frame(yHat), function(x,y) mean((x - y)^2), testY)
+      cvResults[k, paramDesign$alpha == myAlpha] <- err  
+      if(sd(yHat) != 0 && sd(testY) != 0)
+      {
+        correlation_results[k, paramDesign$alpha == myAlpha] <- cor(yHat,testY)        
+      }
+      else
+      {
+        correlation_results[k, paramDesign$alpha == myAlpha] <- 0
+      }
+    }
+  }
+  cv <- list()
+  cv$params <- paramDesign
+  # MSE Criteria
+  ## Plain
+  cv$mean <- colMeans(cvResults)
+  cv$sd <- apply(cvResults, 2, sd)
+  minIndex <- which.min(cv$mean)
+  cv$minParam <- paramDesign[minIndex,]
+  ## One standard deviation rule
+  subParam <- paramDesign[cv$mean < cv$mean[minIndex] + cv$sd[minIndex], ]
+  cv$oneSdParam <- subParam[which.max(apply(subParam, 1, sum)),] #simpler models come from larger alpha and lambda. 
+  
+  #include best correlation 
+  cv$correlations <- mean(correlation_results[,minIndex])
+  
+  # R2 Criteria
+  varMat <- matrix(rep(varTest, dim(cvResults)[2]), ncol = dim(cvResults)[2])
+  r2 <- 1 - cvResults / varMat
+  ## Plain
+  cv$meanr2 <- colMeans(r2)
+  cv$sdr2 <- apply(r2, 2, sd)
+  maxIndex <- which.max(cv$meanr2)
+  cv$maxParamr2 <- paramDesign[maxIndex,]
+  cv$varY <- var(response)
+  return(cv)
+}
+```
+In the paper, the parameters are chosen to minimize MSE. The function cv.DataSharing returns multiple values, so we will account for this in the main experiment. 
+
+# Bootstrapping
+After parameters are tuned, the authors form 200 bootstrapped data sets. An elastic net is fitted to each dataset and the regression coefficients are placed into a $200 \times p$ matrix. Moreover, the number of times feature $i$ corresponds to a non-zero regression coefficient is tracked. 
+
+```{r bootstrap}
+bootstrap <- function(N, p, predictors, response, lambda, alpha)
+{
+  bootstrap_mat <- matrix(0, nrow = N, ncol = p)
+  num_samples <- nrow(predictors)
+
+  for(i in 1:N)
+  {
+    #No correlation reduction in this case
+    bootstrap_sample <- sample(1:num_samples, size = num_samples, replace = TRUE)
+    
+    predictors_bs <- predictors[bootstrap_sample,]
+    
+    fit = glmnet(x = predictors_bs, y = response[bootstrap_sample,], lambda = lambda, alpha = alpha)
+    bootstrap_mat[i,] = as.matrix(coef(fit))[2:(p+1),1]
+    
+    
+    #commented out code: Do we threshold correlation at each bootstrap?
+    
+    #predictors_bs <- predictors_bs[,apply(predictors_bs, 2, var) != 0]
+    
+    #correlations <- apply(predictors_bs, 2, cor, y = response[bootstrap_sample,])
+    #mask <- (abs(correlations) >= corrThresh) 
+    #mask <- which(mask == TRUE)
+    
+    #predictors_bs <- predictors_bs[,mask]
+    #n_predictors <- ncol(predictors_bs)
+    
+    #fit = glmnet(x = predictors_bs, y=response[bootstrap_sample,], lambda = lambda, alpha = alpha)
+    #bootstrap_mat[i,mask] = as.matrix(coef(fit)[2:(n_predictors+1),1])
+  }
+  feature_importance <- rep(0, p)
+  for(i in 1:p)
+  {
+    feature_importance[i] = length(which(bootstrap_mat[,i] != 0))/N
+  }
+  return_list <- list()
+  return_list[[1]] = bootstrap_mat
+  return_list[[2]] = feature_importance
+  return(return_list)
+}
+
+```
+
+# Main Experiment
+First, the parameters are tuned by cross validation. Then relevant features are selected using bootstrapping. The paper keeps features with a bootstrap score above 0.8, unless less than 5 features obtain this score (in which case it is ensured that there are at least 5 features). With this reduced set of features, an elastic net is fitted to the data. This is very computationally demanding, and for simplicity I only do one drug type... although this code can easily be adjusted to do all 24.
+
+```{r mainExperiment}
+load(file = file.path(paths$clean, "xyt_Topotecan.Rda"))
+predictors <- subset(xyt, select = -c(yic50, yaa, t))
+
+response <- as.matrix(xyt$yaa, ncol = 1) 
+predictors <- as.matrix(subset(xyt, select = -c(yic50, yaa, t)))
+
+cv <- cv.DataSharing(predictors, response, nfolds, alphas, lambdas, corrThresh)
+#get best alpha and lambda
+alpha <- cv$minParam[2]
+lambda <- cv$minParam[1]
+
+print(cv$correlations)
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Appendix: Session Info
+This anlysis was performed in this environment:
+```{r si}
+sessionInfo()
+```

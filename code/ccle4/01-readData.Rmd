@@ -59,7 +59,7 @@ The most restrictive part of the data is the set of tested drugs. So we first re
 drugs <- read.csv(file.path(paths$raw, "CCLE_NP24.2009_Drug_data_2015.02.24.csv"), header = T, check.names =  FALSE, stringsAsFactors = F)
 dim(drugs)
 head(drugs)
-sampleNames <- unique(sort(as.character(drugs$CCLE.Cell.Line.Name)))
+sampleNames <- unique(sort(as.character(drugs$`CCLE Cell Line Name`)))
 length(sampleNames)
 
 fileName <- file.path(paths$clean,"doseResponse.Rda")
