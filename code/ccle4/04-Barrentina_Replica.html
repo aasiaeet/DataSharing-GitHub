@@ -627,13 +627,25 @@ i, em {color: blue; }
 <div id="main-experiment" class="section level1">
 <h1><span class="header-section-number">4</span> Main Experiment</h1>
 <p>First, the parameters are tuned by cross validation. Then relevant features are selected using bootstrapping. The paper keeps features with a bootstrap score above 0.8, unless less than 5 features obtain this score (in which case it is ensured that there are at least 5 features). With this reduced set of features, an elastic net is fitted to the data. This is very computationally demanding, and for simplicity I only do one drug type… although this code can easily be adjusted to do all 24.</p>
-<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="kw">load</span>(<span class="dt">file =</span> <span class="kw">file.path</span>(paths<span class="op">$</span>clean, <span class="st">&quot;xyt_Topotecan.Rda&quot;</span>))</a>
-<a class="sourceLine" id="cb8-2" data-line-number="2">predictors &lt;-<span class="st"> </span><span class="kw">subset</span>(xyt, <span class="dt">select =</span> <span class="op">-</span><span class="kw">c</span>(yic50, yaa, t))</a>
-<a class="sourceLine" id="cb8-3" data-line-number="3"></a>
-<a class="sourceLine" id="cb8-4" data-line-number="4">response &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(xyt<span class="op">$</span>yaa, <span class="dt">ncol =</span> <span class="dv">1</span>) </a>
-<a class="sourceLine" id="cb8-5" data-line-number="5">predictors &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">subset</span>(xyt, <span class="dt">select =</span> <span class="op">-</span><span class="kw">c</span>(yic50, yaa, t)))</a>
-<a class="sourceLine" id="cb8-6" data-line-number="6"></a>
-<a class="sourceLine" id="cb8-7" data-line-number="7">cv &lt;-<span class="st"> </span><span class="kw">cv.DataSharing</span>(predictors, response, nfolds, alphas, lambdas, corrThresh)</a></code></pre></div>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb8-1" data-line-number="1"><span class="cf">for</span>(drug <span class="cf">in</span> <span class="kw">unique</span>(doseResponse<span class="op">$</span>compound))</a>
+<a class="sourceLine" id="cb8-2" data-line-number="2">{</a>
+<a class="sourceLine" id="cb8-3" data-line-number="3">  <span class="kw">load</span>(<span class="dt">file =</span> <span class="kw">file.path</span>(paths<span class="op">$</span>clean, <span class="kw">paste</span>(<span class="st">&quot;xyt_&quot;</span>, drug, <span class="st">&quot;.Rda&quot;</span>, <span class="dt">sep =</span> <span class="st">&quot;&quot;</span>)))</a>
+<a class="sourceLine" id="cb8-4" data-line-number="4">  predictors &lt;-<span class="st"> </span><span class="kw">subset</span>(xyt, <span class="dt">select =</span> <span class="op">-</span><span class="kw">c</span>(yic50, yaa, t))  </a>
+<a class="sourceLine" id="cb8-5" data-line-number="5">  </a>
+<a class="sourceLine" id="cb8-6" data-line-number="6">  response &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(xyt<span class="op">$</span>yaa, <span class="dt">ncol =</span> <span class="dv">1</span>) </a>
+<a class="sourceLine" id="cb8-7" data-line-number="7">  predictors &lt;-<span class="st"> </span><span class="kw">as.matrix</span>(<span class="kw">subset</span>(xyt, <span class="dt">select =</span> <span class="op">-</span><span class="kw">c</span>(yic50, yaa, t)))</a>
+<a class="sourceLine" id="cb8-8" data-line-number="8">  </a>
+<a class="sourceLine" id="cb8-9" data-line-number="9">  cv &lt;-<span class="st"> </span><span class="kw">cv.DataSharing</span>(predictors, response, nfolds, alphas, lambdas, corrThresh)</a>
+<a class="sourceLine" id="cb8-10" data-line-number="10">  </a>
+<a class="sourceLine" id="cb8-11" data-line-number="11">  <span class="kw">cat</span>(<span class="st">&quot;Drug name: &quot;</span>, drug, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)</a>
+<a class="sourceLine" id="cb8-12" data-line-number="12">  alpha &lt;-<span class="st"> </span>cv<span class="op">$</span>minParam[<span class="dv">2</span>]</a>
+<a class="sourceLine" id="cb8-13" data-line-number="13">  lambda &lt;-<span class="st"> </span>cv<span class="op">$</span>minParam[<span class="dv">1</span>]</a>
+<a class="sourceLine" id="cb8-14" data-line-number="14">  </a>
+<a class="sourceLine" id="cb8-15" data-line-number="15">  <span class="kw">cat</span>(<span class="st">&quot;Correlation: &quot;</span>, cv<span class="op">$</span>correlations, <span class="st">&quot;</span><span class="ch">\n</span><span class="st">&quot;</span>)</a>
+<a class="sourceLine" id="cb8-16" data-line-number="16">  </a>
+<a class="sourceLine" id="cb8-17" data-line-number="17">  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;Minimum MSE is&quot;</span>, <span class="kw">min</span>(cv<span class="op">$</span>mean), <span class="st">&quot;where parameters are&quot;</span>, <span class="st">&quot;( alpha =&quot;</span>, cv<span class="op">$</span>minParam[<span class="dv">2</span>], <span class="st">&quot;, lambda =&quot;</span>, cv<span class="op">$</span>minParam[<span class="dv">1</span>], <span class="st">&quot;)&quot;</span>))</a>
+<a class="sourceLine" id="cb8-18" data-line-number="18">  <span class="kw">print</span>(<span class="kw">paste</span>(<span class="st">&quot;Maximum R2 is&quot;</span>, <span class="kw">max</span>(cv<span class="op">$</span>meanr2), <span class="st">&quot;where parameters are&quot;</span>, <span class="st">&quot;( alpha =&quot;</span>, cv<span class="op">$</span>maxParamr2[<span class="dv">2</span>], <span class="st">&quot;, lambda =&quot;</span>, cv<span class="op">$</span>maxParamr2[<span class="dv">1</span>], <span class="st">&quot;)&quot;</span>))</a>
+<a class="sourceLine" id="cb8-19" data-line-number="19">}</a></code></pre></div>
 <pre><code>## [1] 1</code></pre>
 <pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
 
@@ -854,17 +866,5167 @@ i, em {color: blue; }
 ## Warning in cor(yHat, testY): the standard deviation is zero
 
 ## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
-<div class="sourceCode" id="cb29"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb29-1" data-line-number="1"><span class="co">#get best alpha and lambda</span></a>
-<a class="sourceLine" id="cb29-2" data-line-number="2">alpha &lt;-<span class="st"> </span>cv<span class="op">$</span>minParam[<span class="dv">2</span>]</a>
-<a class="sourceLine" id="cb29-3" data-line-number="3">lambda &lt;-<span class="st"> </span>cv<span class="op">$</span>minParam[<span class="dv">1</span>]</a>
-<a class="sourceLine" id="cb29-4" data-line-number="4"></a>
-<a class="sourceLine" id="cb29-5" data-line-number="5"><span class="kw">print</span>(cv<span class="op">$</span>correlations)</a></code></pre></div>
-<pre><code>## [1] 0.5890934</code></pre>
+<pre><code>## Drug name:  AEW541 
+## Correlation:  0.3921455 
+## [1] &quot;Minimum MSE is 0.331386703555197 where parameters are ( alpha = 0.36 , lambda = 0.169314050763455 )&quot;
+## [1] &quot;Maximum R2 is 0.138339041015387 where parameters are ( alpha = 0.36 , lambda = 0.176930195482497 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Nilotinib 
+## Correlation:  0.2036126 
+## [1] &quot;Minimum MSE is 0.499152216944838 where parameters are ( alpha = 0.2 , lambda = 0.825306868491682 )&quot;
+## [1] &quot;Maximum R2 is -0.0674602237224962 where parameters are ( alpha = 0.2 , lambda = 1.52806159378406 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  17-AAG 
+## Correlation:  0.4647438 
+## [1] &quot;Minimum MSE is 0.909925910871119 where parameters are ( alpha = 1 , lambda = 0.0672055127397498 )&quot;
+## [1] &quot;Maximum R2 is 0.21139623509205 where parameters are ( alpha = 1 , lambda = 0.0672055127397498 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  PHA-665752 
+## Correlation:  0.2258248 
+## [1] &quot;Minimum MSE is 0.217762577488023 where parameters are ( alpha = 0.2 , lambda = 0.426560956345091 )&quot;
+## [1] &quot;Maximum R2 is 0.0372556321418604 where parameters are ( alpha = 0.2 , lambda = 0.44574867266496 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Lapatinib 
+## Correlation:  0.6023202 
+## [1] &quot;Minimum MSE is 0.35512618840457 where parameters are ( alpha = 0.36 , lambda = 0.135877708496846 )&quot;
+## [1] &quot;Maximum R2 is 0.351588291557361 where parameters are ( alpha = 0.28 , lambda = 0.176930195482497 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Nutlin-3 
+## Correlation:  0.1647447 
+## [1] &quot;Minimum MSE is 0.186968709376066 where parameters are ( alpha = 0.2 , lambda = 0.357721688980454 )&quot;
+## [1] &quot;Maximum R2 is 0.0184536572332589 where parameters are ( alpha = 0.2 , lambda = 0.373812852945467 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  AZD0530 
+## Correlation:  0.2500446 
+## [1] &quot;Minimum MSE is 0.535583574240728 where parameters are ( alpha = 0.92 , lambda = 0.124431489460228 )&quot;
+## [1] &quot;Maximum R2 is 0.0567412844988946 where parameters are ( alpha = 0.92 , lambda = 0.124431489460228 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  PF2341066 
+## Correlation:  0.3041071 
+## [1] &quot;Minimum MSE is 0.385077013978854 where parameters are ( alpha = 0.84 , lambda = 0.113949489880088 )&quot;
+## [1] &quot;Maximum R2 is 0.0879784383116059 where parameters are ( alpha = 0.84 , lambda = 0.119075206273231 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  L-685458 
+## Correlation:  0.4306113 
+## [1] &quot;Minimum MSE is 0.225768737707795 where parameters are ( alpha = 0.2 , lambda = 0.342323185943788 )&quot;
+## [1] &quot;Maximum R2 is 0.167764797492989 where parameters are ( alpha = 0.2 , lambda = 0.373812852945467 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  ZD-6474 
+## Correlation:  0.3861019 
+## [1] &quot;Minimum MSE is 0.43216986739404 where parameters are ( alpha = 0.92 , lambda = 0.070228574964269 )&quot;
+## [1] &quot;Maximum R2 is 0.130112043531437 where parameters are ( alpha = 0.84 , lambda = 0.113949489880088 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Panobinostat 
+## Correlation:  0.6464718 
+## [1] &quot;Minimum MSE is 0.39372633441856 where parameters are ( alpha = 0.2 , lambda = 0.357721688980454 )&quot;
+## [1] &quot;Maximum R2 is 0.394157541605759 where parameters are ( alpha = 0.2 , lambda = 0.357721688980454 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Sorafenib 
+## Correlation:  0.278754 
+## [1] &quot;Minimum MSE is 0.234132490720958 where parameters are ( alpha = 0.2 , lambda = 0.119075206273231 )&quot;
+## [1] &quot;Maximum R2 is 0.0084507975981941 where parameters are ( alpha = 0.2 , lambda = 0.201896517994655 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Irinotecan 
+## Correlation:  0.6887402 
+## [1] &quot;Minimum MSE is 0.701694167267904 where parameters are ( alpha = 0.68 , lambda = 0.210978298817832 )&quot;
+## [1] &quot;Maximum R2 is 0.432398724860419 where parameters are ( alpha = 0.6 , lambda = 0.240749091965877 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Topotecan 
+## Correlation:  0.6282748 
+## [1] &quot;Minimum MSE is 0.879331571961097 where parameters are ( alpha = 1 , lambda = 0.0955600914055276 )&quot;
+## [1] &quot;Maximum R2 is 0.388227388439582 where parameters are ( alpha = 1 , lambda = 0.0998586093503032 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  LBW242 
+## Correlation:  NA 
+## [1] &quot;Minimum MSE is 0.358824250504375 where parameters are ( alpha = 0.2 , lambda = 53.9468876223415 )&quot;
+## [1] &quot;Maximum R2 is -0.000108717765503608 where parameters are ( alpha = 0.2 , lambda = 26.6822886806136 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  PD-0325901 
+## Correlation:  0.6678775 
+## [1] &quot;Minimum MSE is 1.30062924752545 where parameters are ( alpha = 1 , lambda = 0.124431489460228 )&quot;
+## [1] &quot;Maximum R2 is 0.415980459604457 where parameters are ( alpha = 1 , lambda = 0.14198980780188 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  PD-0332991 
+## Correlation:  0.4102545 
+## [1] &quot;Minimum MSE is 0.364249321456051 where parameters are ( alpha = 0.2 , lambda = 0.580421915140742 )&quot;
+## [1] &quot;Maximum R2 is 0.132562727172962 where parameters are ( alpha = 0.2 , lambda = 0.580421915140742 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Paclitaxel 
+## Correlation:  0.6240046 
+## [1] &quot;Minimum MSE is 1.25594726998761 where parameters are ( alpha = 0.2 , lambda = 0.408199195277923 )&quot;
+## [1] &quot;Maximum R2 is 0.345754562260033 where parameters are ( alpha = 0.2 , lambda = 0.408199195277923 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  AZD6244 
+## Correlation:  0.5932992 
+## [1] &quot;Minimum MSE is 0.856269591473369 where parameters are ( alpha = 0.68 , lambda = 0.210978298817832 )&quot;
+## [1] &quot;Maximum R2 is 0.333907270580812 where parameters are ( alpha = 0.52 , lambda = 0.274720791698295 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  PLX4720 
+## Correlation:  0.5262967 
+## [1] &quot;Minimum MSE is 0.182324768979985 where parameters are ( alpha = 0.68 , lambda = 0.135877708496846 )&quot;
+## [1] &quot;Maximum R2 is 0.242112315338918 where parameters are ( alpha = 0.76 , lambda = 0.130028710878426 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  RAF265 
+## Correlation:  0.3818832 
+## [1] &quot;Minimum MSE is 0.431718607127989 where parameters are ( alpha = 0.2 , lambda = 0.508647518680314 )&quot;
+## [1] &quot;Maximum R2 is 0.12968482905173 where parameters are ( alpha = 0.2 , lambda = 0.508647518680314 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  TAE684 
+## Correlation:  0.3598202 
+## [1] &quot;Minimum MSE is 0.629301741311982 where parameters are ( alpha = 0.92 , lambda = 0.14198980780188 )&quot;
+## [1] &quot;Maximum R2 is 0.11701973689311 where parameters are ( alpha = 0.92 , lambda = 0.148376843726966 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  TKI258 
+## Correlation:  0.4358367 
+## [1] &quot;Minimum MSE is 0.239819982814273 where parameters are ( alpha = 0.2 , lambda = 0.240749091965877 )&quot;
+## [1] &quot;Maximum R2 is 0.183661329552048 where parameters are ( alpha = 0.2 , lambda = 0.274720791698295 )&quot;
+## [1] 1</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 2</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 3</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 4</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 5</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 6</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 7</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 8</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 9</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## [1] 10</code></pre>
+<pre><code>## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero
+
+## Warning in cor(yHat, testY): the standard deviation is zero</code></pre>
+<pre><code>## Drug name:  Erlotinib 
+## Correlation:  0.3667688 
+## [1] &quot;Minimum MSE is 0.316778254087015 where parameters are ( alpha = 0.2 , lambda = 0.486752255959971 )&quot;
+## [1] &quot;Maximum R2 is 0.129708415084856 where parameters are ( alpha = 0.2 , lambda = 0.508647518680314 )&quot;</code></pre>
 </div>
 <div id="appendix-session-info" class="section level1">
 <h1><span class="header-section-number">5</span> Appendix: Session Info</h1>
 <p>This anlysis was performed in this environment:</p>
-<div class="sourceCode" id="cb31"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb31-1" data-line-number="1"><span class="kw">sessionInfo</span>()</a></code></pre></div>
+<div class="sourceCode" id="cb490"><pre class="sourceCode r"><code class="sourceCode r"><a class="sourceLine" id="cb490-1" data-line-number="1"><span class="kw">sessionInfo</span>()</a></code></pre></div>
 <pre><code>## R version 3.6.2 (2019-12-12)
 ## Platform: x86_64-apple-darwin15.6.0 (64-bit)
 ## Running under: macOS Catalina 10.15.3
