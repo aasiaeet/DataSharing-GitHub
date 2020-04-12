@@ -48,7 +48,7 @@ corrThresh <- .1
 load(file.path(paths$clean,"doseResponse.Rda"))
 ```
 
-Now we can perform the cross validation. Note that there are 2500 possible combinations of $\alpha$ and $\lambda$! 
+Now we can perform the cross validation. Note that there are 2500 possible combinations of $\alpha$ and $\lambda$.
 ```{r}
 library(glmnet)
 cv.DataSharing <- function(predictors, response, nfolds, alphas, lambdas, corrThresh){
@@ -63,7 +63,7 @@ cv.DataSharing <- function(predictors, response, nfolds, alphas, lambdas, corrTh
     #print(paste("Fold", k, "started."))
     # ptm <- proc.time()
     
-    print(k)
+    #print(k)
     
     #in line with what I said above, they randomly choose test id
     testId <- sample(1:nTrain, size = ceiling(nTrain/10), replace = FALSE)
@@ -87,14 +87,14 @@ cv.DataSharing <- function(predictors, response, nfolds, alphas, lambdas, corrTh
       fit <- glmnet(x = bestTrainX, y = as.vector(trainY), alpha = myAlpha, lambda = lambdas)
       yHat <- predict(fit, newx=bestTestX, s = lambdas) 
       err <- sapply(as.data.frame(yHat), function(x,y) mean((x - y)^2), testY)
-      cvResults[k, paramDesign$alpha == myAlpha] <- err  
-      if(sd(yHat) != 0 && sd(testY) != 0)
+      cvResults[k, paramDesign$alpha == myAlpha] <- err 
+      if(is.na(cor(yHat, testY)))
       {
-        correlation_results[k, paramDesign$alpha == myAlpha] <- cor(yHat,testY)        
+        correlation_results[k, paramDesign$alpha == myAlpha] <- 0       
       }
       else
       {
-        correlation_results[k, paramDesign$alpha == myAlpha] <- 0
+        correlation_results[k, paramDesign$alpha == myAlpha] <- cor(yHat,testY)             
       }
     }
   }
@@ -162,13 +162,16 @@ bootstrap <- function(N, p, predictors, response, lambda, alpha)
     #bootstrap_mat[i,mask] = as.matrix(coef(fit)[2:(n_predictors+1),1])
   }
   feature_importance <- rep(0, p)
+  feature_scores <- rep(0,p)
   for(i in 1:p)
   {
     feature_importance[i] = length(which(bootstrap_mat[,i] != 0))/N
+    feature_scores[i] = mean(bootstrap_mat[,i])
   }
   return_list <- list()
   return_list[[1]] = bootstrap_mat
   return_list[[2]] = feature_importance
+  return_list[[3]] = feature_scores
   return(return_list)
 }
 
@@ -177,7 +180,7 @@ bootstrap <- function(N, p, predictors, response, lambda, alpha)
 # Main Experiment
 First, the parameters are tuned by cross validation. Then relevant features are selected using bootstrapping. The paper keeps features with a bootstrap score above 0.8, unless less than 5 features obtain this score (in which case it is ensured that there are at least 5 features). With this reduced set of features, an elastic net is fitted to the data. This is very computationally demanding, and for simplicity I only do one drug type... although this code can easily be adjusted to do all 24.
 
-```{r mainExperiment}
+```{r mainExperiment, warning = FALSE, message = FALSE}
 
 for(drug in unique(doseResponse$compound))
 {
@@ -193,10 +196,21 @@ for(drug in unique(doseResponse$compound))
   alpha <- cv$minParam[2]
   lambda <- cv$minParam[1]
   
-  cat("Correlation: ", cv$correlations, "\n")
+  cat("Correlation with output: ", cv$correlations, "\n")
   
   print(paste("Minimum MSE is", min(cv$mean), "where parameters are", "( alpha =", cv$minParam[2], ", lambda =", cv$minParam[1], ")"))
   print(paste("Maximum R2 is", max(cv$meanr2), "where parameters are", "( alpha =", cv$maxParamr2[2], ", lambda =", cv$maxParamr2[1], ")"))
+  
+  #boostrap
+  bs <- bootstrap(200, ncol(predictors), predictors, response, cv$minParam[1], cv$minParam[2])
+  feature_importance <- bs[[2]]
+  feature_scores <- bs[[3]]
+  best_genes <- which(feature_importance > 0.8)
+  print("Boostrap significant genes (>0.8) are")
+  for(i in best_genes)
+  {
+    print(paste(colnames(predictors)[i], " with coefficient ", feature_scores[i], " at significance ", feature_importance[i]))
+  }
 }
 ```
 
